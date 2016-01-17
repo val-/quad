@@ -1,4 +1,4 @@
-//$fn=100;
+$fn=80;
 
 PROPELLER_D = 8*25.4;
 SIZE = 260;
@@ -25,15 +25,18 @@ middlePoint = (frontDelta-rearDelta)/2;
 
 //propellers();
 
-//color("white") render() arms();
+color("white") render() arms();
 
-color("gray") baseFrame();
+//color("gray") baseFrame();
+/*
 color("gray") middleFrame();
 
+color("black") vibroBalls();
 color("gray") topFrame();
 color("yellow") battery();
 color("green") naze32();
-
+color([0.4,0.4,0.4]) receiver();
+*/
 //color("white") render() armTube(FRONT_ARM_SIZE);
 
 
@@ -44,6 +47,8 @@ module frameTesting() {
         union() {
             color("gray") baseFrame();
             color("gray") middleFrame();
+            color("black") vibroBalls();
+            color("gray") topFrame();
         }
         translate([middlePoint, 0, -50]) cube([300,300,300]);
     }
@@ -53,9 +58,9 @@ module baseFrame() {
     render() difference() {
         translate([0,0,-ARM_THICKNESS*0.2]) baseShape();
         difference() {
-            translate([0,0,-ARM_THICKNESS*0.1]) baseShape(16, BASE_SHAPE_WIDTH*2/3, ARM_BASE_SHAPE_PADDING, 50, 100);
+            translate([0,0,-ARM_THICKNESS*0.1]) baseFrameInnerWrapper(16);
             translate([middlePoint,0,-ARM_THICKNESS*0.2]) {
-                cylinder(d=BASE_FRAME_HOLE_D*2.5, h=6);
+                cylinder(d=BASE_FRAME_HOLE_D*2.5, h=7);
             }
             translate([middlePoint,0,0]) {
                 rotate([0,0,30]) cube([BASE_SHAPE_WIDTH*2, 3, 5], true);
@@ -67,13 +72,38 @@ module baseFrame() {
     }
 }
 
+module baseFrameInnerWrapper(h) {
+    baseShape(h, BASE_SHAPE_WIDTH*2/3, ARM_BASE_SHAPE_PADDING, 50, 100);
+}
+
 module middleFrame() {
-    render() difference() {
-        translate([0,0,ARM_THICKNESS*1 + 0.05]) baseShape(2);
-        baseFrameHoles();
-        translate([middlePoint,0,10]) {
-            translate([-BASE_SHAPE_WIDTH/1.5,0,0]) roundedRect([BASE_SHAPE_WIDTH/2, BASE_SHAPE_WIDTH/2, 10], 5);
-            translate([BASE_SHAPE_WIDTH/1.5,0,0]) roundedRect([BASE_SHAPE_WIDTH/2, BASE_SHAPE_WIDTH/2, 10], 5);
+    union() {
+        render() difference() {
+            union() {
+                translate([0,0,ARM_THICKNESS*1 + 0.05]) {
+                    baseShape(2);
+                    translate([0,0,-1]) scale([0.998,0.99,1]) baseFrameInnerWrapper(3);
+                }
+                armMiddleFrameHolders();
+            }
+            translate([0,0,ARM_THICKNESS*1 + 0.05-2]) scale([0.9,0.9,1]) baseFrameInnerWrapper(3);
+            baseFrameHoles();
+            vibroBallsHoles();
+            
+            translate([middlePoint,0,10]) {
+                translate([-BASE_SHAPE_WIDTH/2,0,0]) roundedRect([BASE_SHAPE_WIDTH/1.6, BASE_SHAPE_WIDTH/1.6, 10], 5);
+                translate([BASE_SHAPE_WIDTH/2.2,0,0]) roundedRect([BASE_SHAPE_WIDTH/1.8, BASE_SHAPE_WIDTH/1.6, 10], 5);
+            }
+        }
+        render() difference() {
+            translate([middlePoint,0,ARM_THICKNESS-3.5]) {
+                cylinder(d=BASE_FRAME_HOLE_D*2.5, h=5);
+            }
+            baseFrameHoles();      
+        }
+        translate([middlePoint,0,ARM_THICKNESS]) {
+            rotate([0,0,20]) cube([2,BASE_SHAPE_WIDTH*0.95,1.9],true);
+            rotate([0,0,-20]) cube([2,BASE_SHAPE_WIDTH*0.95,1.9],true);
         }
     }
 }
@@ -81,33 +111,50 @@ module middleFrame() {
 module topFrame() {
     render() difference() {
         translate([0,0,ARM_THICKNESS*1 + 10]) baseShape(2);
+        vibroBallsHoles();
     }
 }
 
 module baseShape(h=ARM_THICKNESS*1.2, width=BASE_SHAPE_WIDTH, padding=BASE_SHAPE_WIDTH/2, innerWidth=0, innerLength=0) {
     
-    hull() {
-        translate([frontDelta,0,h/2]) {
-            rotate([0,0,90-FRONT_ARM_ANGLE]) {
-                translate([padding,0,0]) cube([1,width/2,h], true);
+    render() union() {
+        hull() {
+            translate([frontDelta,0,h/2]) {
+                rotate([0,0,90-FRONT_ARM_ANGLE]) {
+                    //translate([padding,0,0]) cube([1,width/2,h], true);
+                    translate([padding,0,0]) baseShapeStend(width/2,h);
+                }
+                rotate([0,0,-90+FRONT_ARM_ANGLE]) {
+                    translate([padding,0,0]) baseShapeStend(width/2,h);
+                }        
             }
-            rotate([0,0,-90+FRONT_ARM_ANGLE]) {
-                translate([padding,0,0]) cube([1,width/2,h], true);
-            }        
-        }
-        translate([-rearDelta,0,h/2]) {
-            rotate([0,0,-90-REAR_ARM_ANGLE]) {
-                translate([padding,0,0]) cube([1,width/2,h], true);
+            translate([-rearDelta,0,h/2]) {
+                rotate([0,0,-90-REAR_ARM_ANGLE]) {
+                    translate([padding,0,0]) baseShapeStend(width/2,h);
+                }
+                rotate([0,0,90+REAR_ARM_ANGLE]) {
+                    translate([padding,0,0]) baseShapeStend(width/2,h);
+                }        
             }
-            rotate([0,0,90+REAR_ARM_ANGLE]) {
-                translate([padding,0,0]) cube([1,width/2,h], true);
-            }        
         }
-        translate([middlePoint,0,h/2]) {
-            cube([innerLength,innerWidth,h], true);
+        hull() {
+            translate([middlePoint,0,0]) {
+                roundedRect([innerLength,innerWidth,h], 5);
+            }
+            translate([frontDelta,0,0]) {
+                cylinder(d=30, h=h);
+            }
+            translate([-rearDelta,0,0]) {
+                cylinder(d=30, h=h);
+            }
         }
     }
     
+}
+
+module baseShapeStend(w, h) {
+    translate([-0.99,w/2,-h/2]) cylinder(d=2, h=h);
+    translate([-0.99,-w/2,-h/2]) cylinder(d=2, h=h);
 }
 
 module baseFrameHoles(padding=BASE_SHAPE_WIDTH/2.4) {
@@ -136,9 +183,42 @@ module baseFrameHoles(padding=BASE_SHAPE_WIDTH/2.4) {
         }
 }
 
+module vibroBallsHoles() {
+    
+    translate([middlePoint,BASE_SHAPE_WIDTH/2.9,0]) cylinder(d=5.5, h=30);
+    translate([middlePoint,-BASE_SHAPE_WIDTH/2.9,0]) cylinder(d=5.5, h=30);
+    
+    translate([frontDelta,BASE_SHAPE_WIDTH/4.9,0]) cylinder(d=5.5, h=30);
+    translate([frontDelta,-BASE_SHAPE_WIDTH/4.9,0]) cylinder(d=5.5, h=30);    
+    
+    translate([-rearDelta,BASE_SHAPE_WIDTH/4.9,0]) cylinder(d=5.5, h=30);
+    translate([-rearDelta,-BASE_SHAPE_WIDTH/4.9,0]) cylinder(d=5.5, h=30);   
+    
+}
+
+module vibroBalls() {
+    
+    translate([middlePoint,BASE_SHAPE_WIDTH/2.9,0]) vibroBall();
+    translate([middlePoint,-BASE_SHAPE_WIDTH/2.9,0]) vibroBall();
+    
+    translate([frontDelta,BASE_SHAPE_WIDTH/4.9,0]) vibroBall();
+    translate([frontDelta,-BASE_SHAPE_WIDTH/4.9,0]) vibroBall();
+    
+    translate([-rearDelta,BASE_SHAPE_WIDTH/4.9,0]) vibroBall();
+    translate([-rearDelta,-BASE_SHAPE_WIDTH/4.9,0]) vibroBall();
+    
+}
+
+module vibroBall() {
+    translate([0,0,9.5]) cylinder(d=4.5, h=14);
+    translate([0,0,9.5]) cylinder(d=7, h=1);
+    translate([0,0,22.5]) cylinder(d=7, h=1);
+    translate([0,0,16]) sphere(d=9);
+}
+
 module arms() {
     //rearArms
-    arm(REAR_ARM_SIZE, REAR_ARM_ANGLE, +1, -1);
+    //arm(REAR_ARM_SIZE, REAR_ARM_ANGLE, +1, -1);
     arm(REAR_ARM_SIZE, REAR_ARM_ANGLE, -1, -1);
 
     //frontArms
@@ -175,12 +255,26 @@ module arm(size, angle, sideX, sideY) {
 
 
 module motorHolder() {
-    cylinder(d=MOTOR_WRAPPER_DELTA*2+MOTOR_D+ARM_THICKNESS*0.4, h=ARM_THICKNESS);
+    d1=MOTOR_WRAPPER_DELTA*2+MOTOR_D+ARM_THICKNESS*0.2-2;
+    d2=MOTOR_WRAPPER_DELTA*2+MOTOR_D+ARM_THICKNESS*0.2;
+    union() {
+        cylinder(d1=d1, d2=d2, h=4);
+        translate([0,0,3.9]) cylinder(d=d2, h=ARM_THICKNESS-3.9);
+    }
 }
 
 
-module motorHolderWrapper() {
-    translate([0,0,ARM_THICKNESS*0.075]) cylinder(d=MOTOR_WRAPPER_DELTA*2+MOTOR_D, h=ARM_THICKNESS);
+module motorHolderWrapper() {    
+    d1=MOTOR_WRAPPER_DELTA*2+MOTOR_D-2;
+    d2=MOTOR_WRAPPER_DELTA*2+MOTOR_D;
+    union() {
+        translate([0,0,ARM_THICKNESS*0.075]) cylinder(d1=d1, d2=d2, h=4);
+        translate([0,0,ARM_THICKNESS*0.075+3.9]) cylinder(d=d2, h=ARM_THICKNESS-3.9);
+        translate([0,0,-5]) cylinder(d=8, h=30);
+        
+        translate([0,19/2,-5]) cylinder(d=4, h=30);
+        translate([0,-19/2,-5]) cylinder(d=4, h=30);
+    }    
 }
 
 module armTube(size) {
@@ -239,6 +333,38 @@ module armFrameWrapper(size, angle, sideX, sideY) {
     }
 }
 
+module armMiddleFrameHolders() {
+    //rearArms
+    armMiddleFrameHolder(REAR_ARM_SIZE, REAR_ARM_ANGLE, +1, -1);
+    armMiddleFrameHolder(REAR_ARM_SIZE, REAR_ARM_ANGLE, -1, -1);
+
+    //frontArms
+    armMiddleFrameHolder(FRONT_ARM_SIZE, FRONT_ARM_ANGLE, +1, +1);
+    armMiddleFrameHolder(FRONT_ARM_SIZE, FRONT_ARM_ANGLE, -1, +1);
+}
+
+module armMiddleFrameHolder(size, angle, sideX, sideY) {
+    translate([sideY*HALF_SIZE, sideX*HALF_SIZE, 0.15]) {
+
+        rotate([0, 0, sideX*90 - sideX*sideY*angle]) {
+            render() difference() {
+                translate([-size+ARM_BASE_SHAPE_PADDING+4.91,0,5]) {
+                    cube([10.2, ARM_THICKNESS*1.2-0.05, ARM_THICKNESS-0.05], true);
+                }                
+                union() {
+                    translate([-size/2+ARM_BASE_SHAPE_PADDING/2-0.25,0,5]) {
+                        rotate([180,0,0]) armTubeShapeWrap(size-ARM_BASE_SHAPE_PADDING, ARM_THICKNESS);
+                    }
+                    translate([-size+ARM_BASE_SHAPE_PADDING+5.5,0,5]) {
+                        cube([3, ARM_THICKNESS*1.4, ARM_THICKNESS], true);
+                    }         
+                }   
+            }        
+        }
+      
+    }
+}
+
 module propellers() {
     translate([HALF_SIZE,HALF_SIZE,0]) propeller();
     translate([-HALF_SIZE,HALF_SIZE,0]) propeller();
@@ -247,7 +373,7 @@ module propellers() {
 }
 
 module propeller() {
-    translate([0,0,35]) #cylinder(d=PROPELLER_D, h=5);
+    translate([0,0,35]) color([1,0,0,0.05]) cylinder(d=PROPELLER_D, h=5);
     translate([0,0,5]) {
         color("gold") cylinder(d=28, h=25);
         color("gray") cylinder(d=3.17, h=37);
@@ -261,7 +387,6 @@ module battery() {
 }
 
 module naze32() {
-
     translate([95,0,26]) {
         render() difference() {
             roundedRect([36,36,2], 5.5);
@@ -271,7 +396,12 @@ module naze32() {
             translate([-15.25,-15.25,-1]) cylinder(d=4, h=10);
         }
     }
+}
 
+module receiver() {
+    translate([55,0,22.5]) {
+        roundedRect([16, 52, 35], 1);
+    }
 }
 
 module roundedRect(size, radius) {
